@@ -13,17 +13,17 @@
 #' @return an object of class \code{prcout}
 #'
 #' @export
-prcout <- function(x, prob=0.01) {
+prcout <- function(x, prob=0.01, pcx=1, pcy=2) {
   if (is.null(rownames(x))) stop("input x should have rownames")
   obj <- list()
   obj$prc <- stats::prcomp(x)
 
   # identify inner 100(1-prob)% mass of data in PCs 1 and 2
-  prc <- obj$prc$x[, 1:2]
+  prc <- obj$prc$x[, c(pcx,pcy)]
   alpha <- prob
   k <- sqrt(1/alpha)
   x95 <- abs((prc[, 1] - mean(prc[, 1]))/stats::sd(prc[, 1])) < k
-  y95 <- abs((prc[, 2] - mean(prc[, 2]))/stats::sd(prc[, 2])) < k
+  y95 <- abs((prc[, 2] - mean(prc[, 2]))/stats::sd(prc[,2])) < k
   prc_inner <- prc[x95 & y95, ]
 
   # define mahalanobis distances af f'n of inner data, apply to all data
@@ -52,9 +52,9 @@ prcout <- function(x, prob=0.01) {
 #' @param ... passed to predict(obj, ...) to label outliers
 #' @seealso \code{\link{prcout}}, \code{\link{predict.prcout}}
 #' @export
-plot.prcout <- function(x, batch=NULL, highlight=NULL, ...) {
+plot.prcout <- function(x, batch=NULL, highlight=NULL,pcx=1,pcy=2, sd.highlight=3,...) {
   obj <- x
-  prc <- obj$prc$x[, 1:2]
+  prc <- obj$prc$x[, c(pcx,pcy)]
 
   # grid for contour lines
   r1 <- range(prc[,1])
@@ -65,10 +65,10 @@ plot.prcout <- function(x, batch=NULL, highlight=NULL, ...) {
   mha <- matrix(stats::mahalanobis(grid, obj$mu, obj$Sigma), nrow=length(s1))
 
   # plot
-  graphics::contour(s1, s2, mha/obj$sd, levels=1:6, xlab="PC 1", ylab="PC 2")
+  graphics::contour(s1, s2, mha/obj$sd, levels=1:6, xlab=paste("PC ",pcx), ylab=paste("PC ",pcy),xlim=range(c(min(prc[,1]),max(prc[,1]))),ylim=range(c(min(prc[,2]),max(prc[,2]))))
 
   if (is.null(highlight)) {
-    hset <- predict.prcout(obj, ...)
+    hset <- predict.prcout(obj,sdev=sd.highlight, ...)
   }  else {
     hset <- highlight
   }
